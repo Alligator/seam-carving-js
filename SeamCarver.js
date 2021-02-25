@@ -5,6 +5,24 @@ const GREEN = 1;
 const BLUE = 2;
 const BORDER_ENERGY = 1000;
 
+class LRUCache {
+    constructor(max = 10) {
+        this.max = max;
+        this.cache = new Map();
+    }
+
+    has(key) { return this.cache.has(key); }
+    set(key) {
+        if (this.cache.size > this.max) {
+            this.cache.delete(this.cache.keys().next().value);
+        }
+        if (this.cache.has(key)) {
+            return;
+        }
+        this.cache.set(key, 1);
+    }
+}
+
 /** Seam carver removes low energy seams in an image from HTML5 canvas. */
 class SeamCarver {
 
@@ -310,9 +328,7 @@ class SeamCarver {
      * Recalculate vminsum for affected pixels
      */
     recalculateVminsumForAffectedPixels(queue) {
-        var marked = {};
-        var enqueued = {};
-        var maxRow = -1;
+        var marked = new LRUCache(16);
         // start at second to last row
         var row = this.height - 2;
         var enqueuedCols = queue[row];
@@ -327,9 +343,11 @@ class SeamCarver {
             if (enqueuedCols.length === 0) enqueuedCols = queue[--row];
 
             // already explored this pixel
-            if (marked[pixelIndex]) continue;
+            if (marked.has(pixelIndex)) {
+                continue;
+            }
 
-            marked[pixelIndex] = true;
+            marked.set(pixelIndex);
 
             var nodeEnergy = this.energyMatrix[col][row];
             var oldVminsum = this.minsumMatrix[col][row];
@@ -355,11 +373,7 @@ class SeamCarver {
 
             // enqueue three affected children from row above
             for (var i = Math.max(col - 1, 0); i < Math.min(col + 2, lastCol + 1); i ++) {
-                var childIndex = this.pixelToIndex(i, row - 1);
-                if (!enqueued[childIndex]) {
-                    enqueued[childIndex] = true;
-                    queue[row - 1].push(i);
-                }
+                queue[row - 1].push(i);
             }
         }
     }
